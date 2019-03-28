@@ -169,7 +169,8 @@ namespace raytracer
                 for(int j=0;j<5;j++)
                 for (int i = 0; i < 48 ; i++)
                 {
-                    b[i] =  buffer[j+1, 4] + all[i + 1, j+5] - calL(i + 1, j+1);
+                    double L=calL(i+1,j+1);
+                    b[i+j*48] =  buffer[j+1, 4] + all[i + 1, j+5] - L;
                 }
                 return b;
             }
