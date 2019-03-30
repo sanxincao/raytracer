@@ -17,10 +17,11 @@ namespace raytracer
 {
     public partial class Form1 : Form
     {
-
+        Excel excel;//由于全局只使用一张表所以只定义一个excel变量
+        Vector<double> n;//第二个方程的解用于可视化
         public Form1()
         {
-            InitializeComponent();
+            InitializeComponent();//初始化窗口
             //textBox2.ScrollBars
 
         }
@@ -33,7 +34,7 @@ namespace raytracer
             //var formatProvider = (CultureInfo)CultureInfo.InvariantCulture.Clone();
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void button1_Click(object sender, EventArgs e)//打开文件摁钮
         {
 
             OpenFileDialog dlg = new OpenFileDialog();
@@ -43,58 +44,58 @@ namespace raytracer
             dlg.Filter = "文本文件|*.*|表格文件|*.xlsx";
             if (dlg.ShowDialog() == DialogResult.OK)
             {
-                textBox1.Text = dlg.FileName;
-                Excel excel = new Excel(dlg.FileName, 1);
+                textBox1.Text = dlg.FileName;//路径变量
+                excel = new Excel(dlg.FileName, 1);
                 //MessageBox.Show(dlg.FileName);
-                //MessageBox.Show(excel.cor(5).ToString());
-                double ii = excel.cor(1, 1) + excel.cor(2, 2) + excel.cor(3, 3) - excel.cor(5, 5);
-                //MessageBox.Show(ii.ToString());
-
-                // MessageBox.Show(excel.readcell(0, 0).ToString()); 
-                //textBox2.Text += excel.readcell(0,0) + Environment.NewLine;
-                //textBox2.SelectionStart = textBox2.TextAlign;
-                //excel.readexcel( buff, 3, 48, ref excel);
+            
                 for (int i = 0; i < 5; i++)
                 {
-                    var x = excel.solve(i);
-
-                    textBox2.Text += x.ToString();
+                    var x = excel.solve(i);//解第一个方程
+                    textBox2.Text += "第" + (i + 1).ToString() + "组解：  " + " X:  " + x[0].ToString() + " Y:  " + x[1].ToString() + " Z:  " + x[2].ToString() + " d:  " + x[3].ToString() + Environment.NewLine;
+                    //输出
                 }
-                var n = excel.solve1();
-                textBox3.Text = n.ToString();
+                
             }
            ;
         }
+ 
+        private void button2_Click(object sender, EventArgs e)//修正值摁钮
+        {
+            n = excel.solve1();//解第二个方程
+            for(int i=0;i<48;i++)
+            { textBox3.Text += "第" + (i + 1).ToString() + "组解:  " + " dx:  " + n[i * 3].ToString() + " dy:  " + n[i * 3 + 1].ToString() + " dz:  " + n[i * 3 + 2].ToString()+Environment.NewLine; }
+        }
+
+        private void button3_Click(object sender, EventArgs e)//画图摁钮
+        {
+ 
+                int i = Convert.ToInt32(textBox4.Text);
+                this.chart1.Series["delta"].Points.AddXY("dx[" + i.ToString() + "]", n[i*3]);
+                this.chart1.Series["delta"].Points.AddXY("dy[" + i.ToString() + "]", n[i*3+1]);
+                this.chart1.Series["delta"].Points.AddXY("dz[" + i.ToString() + "]", n[i*3+2]);
+            
+        }
         class Excel
         {
-            double[,] all=new double[49,10];
-            double[,] buffer = new double[6, 5];
+            double[,] all=new double[49,10];//用来放excel表里数据，从一开始
+            double[,] buffer = new double[6, 5];//用来放第一组解。从一开始
+            //下面都是用来初始化的构造函数，不用管
             string filepath;
             _Application excel = new _Excel.Application();
             Workbook WB;
             Worksheet ws;
             int row = 48;
+            public Excel()
+            {
+
+            }
             public Excel(string path, int sheet)
             {
                 this.filepath = path;
                 WB = excel.Workbooks.Open(path);
                 ws = WB.Worksheets[sheet];
-            }
-            public double readcell(int row, int col)
-            {
-
-                if (ws.Cells[row, col].Value2 != null)
-                {
-                    double a = Convert.ToDouble(ws.Cells[row, col].Value2);
-                    return a;
-                }
-                else
-                {
-                    return 0;
-                }
-
-            }
-            public void readall(int row, int col)
+            }       
+            public void readall(int row, int col)//读取表内元素放在all数组里
             {
                 for (int i = 1; i < row + 1; i++)
                     for (int j = 1; j < col + 1; j++)
@@ -113,7 +114,7 @@ namespace raytracer
                 }
                 return a;
             }
-            public double[] readrow(int row)
+            public double[] readrow(int row)//读取每一行前三个元素并返回
             {
                 double[] a = new double[4];
                 for (int i = 1; i < 4; i++)
@@ -125,19 +126,19 @@ namespace raytracer
                 }
                 return a;
             }
-            public double cor(int i, int j)
+            public double cor(int i, int j)//计算两列的乘积
             {
                 return math.multi(this.readcol(i), this.readcol(j));
             }
-            public double cor(int i, int j, int k)
+            public double cor(int i, int j, int k)//计算三列的乘积
             {
                 return math.multi(this.readcol(i), this.readcol(j), this.readcol(k));
             }
-            public double cor(int i)
+            public double cor(int i)//计算某一列的和
             {
                 return math.sum(this.readcol(i));
             }
-            public double[] Calculation(int i, int j)//j+1
+            public double[] Calculation(int i, int j)//计算矩阵里的偏导数
             {
                 double[] vs = new double[4];
                 vs[1] = buffer[j+1, 1];
@@ -145,24 +146,26 @@ namespace raytracer
                 vs[3] = buffer[j+1, 3];
                 return math.delta(readrow(i), vs);
             }
-            public double[,] biuldA()//3 shuzu  +1  +2
+            //由于第二个方程的A,B方程太大，额外使用函数建立。
+            public double[,] biuldA()
             {
-                var A = new double[48 * 5, 48 * 3 + 5 * 3];
+                var A = new double[48 * 5, 48 * 3 + 5 * 3];//用来放A的元素
                 var buff = new double[4];
                 for (int i = 0; i < 5; i++)
                     for (int j = 0; j < 48; j++)
                     {
+                        //我发现
                         buff = Calculation(j + 1, i);
-                        A[i*48+j, j * 3] = Calculation(j + 1, i)[1];
-                        A[i*48+j, j * 3 + 1] = Calculation(j + 1, i)[2];
-                        A[i*48+j, j * 3 + 2] = Calculation(j + 1, i)[3];
-                        A[i*48+j, 48 * 3 + i * 3] = Calculation(j + 1, i)[1];
-                        A[i*48+j,( (i + 48) * 3)+1] = Calculation(j + 1, i)[2];
-                        A[i*48+j, ((i + 48) * 3)+2] = Calculation(j + 1, i)[3];
+                        A[i*48+j, j * 3] = buff[1];
+                        A[i*48+j, j * 3 + 1] = buff[2];
+                        A[i*48+j, j * 3 + 2] = buff[3];
+                        A[i*48+j, 48 * 3 + i * 3] =buff[1];
+                        A[i*48+j,( (i + 48) * 3)+1] = buff[2];
+                        A[i*48+j, ((i + 48) * 3)+2] = buff[3];
                     }
                 return A;
             }
-            public double[] biuldB()//jisuan
+            public double[] biuldB()
             {
                 readall(48, 9);
                 var b = new double[48 * 5];
@@ -241,8 +244,8 @@ namespace raytracer
                     return sum;
                 }
                 static public double[] delta(double[] a, double[] b)
-                {//a 是小xyz
-                    double[] Delta = new double[4];//1 _>i////////////////////
+                {
+                    double[] Delta = new double[4];
                     for (int i = 1; i < 4; i++)
                     {
                         Delta[i] = (a[i] - b[i]) / Math.Sqrt((a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]) + (a[3] - b[3]) * (a[3] - b[3]));
