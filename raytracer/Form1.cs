@@ -149,12 +149,12 @@ namespace raytracer
             //由于第二个方程的A,B方程太大，额外使用函数建立。
             public double[,] biuldA()
             {
-                var A = new double[48 * 5, 48 * 3 + 5 * 3];//用来放A的元素
-                var buff = new double[4];
+                var A = new double[48 * 5, 48 * 3 + 5 * 3];//用来放A的元素，零开始
+                var buff = new double[4];//
                 for (int i = 0; i < 5; i++)
                     for (int j = 0; j < 48; j++)
                     {
-                        //我发现
+                        //我发现矩阵前三个的偏导和后三个一致
                         buff = Calculation(j + 1, i);
                         A[i*48+j, j * 3] = buff[1];
                         A[i*48+j, j * 3 + 1] = buff[2];
@@ -165,7 +165,7 @@ namespace raytracer
                     }
                 return A;
             }
-            public double[] biuldB()
+            public double[] biuldB()//构造第二个方程的b
             {
                 readall(48, 9);
                 var b = new double[48 * 5];
@@ -173,15 +173,15 @@ namespace raytracer
                 for (int i = 0; i < 48 ; i++)
                 {
                     double L=calL(i+1,j+1);
-                    b[i+j*48] =  buffer[j+1, 4] + all[i + 1, j+5] - L;
+                    b[i+j*48] =  buffer[j+1, 4] + all[i + 1, j+5] - L;//按照公式来的
                 }
                 return b;
             }
-            public double calL(int i, int j)
+            public double calL(int i, int j)//计算Lij
             {
                 return Math.Sqrt((all[i, 1] - buffer[j, 1]) * (all[i, 1] - buffer[j, 1]) + (all[i, 2] - buffer[j, 2]) * (all[i, 2] - buffer[j, 2]) + (all[i, 3] - buffer[j, 3]) * (all[i, 3] - buffer[j, 3]));
             }
-            public Vector<double> solve(int j)
+            public Vector<double> solve(int j)//计算第一个方程的函数
             {
 
                 var A = Matrix<double>.Build.DenseOfArray(new double[,] {//A的方程矩阵
@@ -211,7 +211,7 @@ namespace raytracer
                 { buffer[j + 1, i] = x[i-1]; }
                 return x;
             }
-            public Vector<double> solve1()
+            public Vector<double> solve1()//计算第二个格方程的函数
             {
 
                 var A = Matrix<double>.Build.DenseOfArray(this.biuldA());
