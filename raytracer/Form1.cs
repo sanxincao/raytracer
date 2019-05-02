@@ -35,8 +35,8 @@ namespace raytracer
         Excel excel;//由于全局只使用一张表所以只定义一个excel变量
 
         Vector<double> n;//第二个方程的解用于可视化
-        
-       
+
+        double[,] ans = new double[48, 3];
         public Form1()
         {
             InitializeComponent();//初始化窗口
@@ -94,7 +94,7 @@ namespace raytracer
 
             // Display result 
             object[] res = result as object[];
-            double[,] ans = new double[48, 3];
+            
             ans = (double[,])res[0];
             for (int i = 0; i < 48; i++)
             { textBox3.Text += "第" + (i + 1).ToString() + "组解:  " + " dx:  " + ans[i ,0].ToString() + " dy:  " + ans[i ,1].ToString() + " dz:  " + ans[i  , 2].ToString()+Environment.NewLine; }
@@ -107,17 +107,18 @@ namespace raytracer
             // n = excel.solve1();//解第二个方程
             //for(int i=0;i<48;i++)
             //{ textBox3.Text += "第" + (i + 1).ToString() + "组解:  " + " dx:  " + n[i * 3].ToString() + " dy:  " + n[i * 3 + 1].ToString() + " dz:  " + n[i * 3 + 2].ToString()+Environment.NewLine; }
-           for( int ii = 1; ii < 48; ii++) { 
-            this.chart1.Series["dx"].Points.AddXY("dx[" + ii.ToString() + "]", ans[ii ,0]);
-            this.chart1.Series["dy"].Points.AddXY("dy[" + ii.ToString() + "]", ans[ii, 1]);
-            this.chart1.Series["dz"].Points.AddXY("dz[" + ii.ToString() + "]", ans[ii , 2]);
-        }
+          
   }
 
         private void button3_Click(object sender, EventArgs e)//画图摁钮
         {
 
-          
+            for (int ii = 1; ii < 48; ii++)
+            {
+                this.chart1.Series["dx"].Points.AddXY("dx[" + ii.ToString() + "]", ans[ii, 0]);
+                this.chart1.Series["dy"].Points.AddXY("dy[" + ii.ToString() + "]", ans[ii, 1]);
+                this.chart1.Series["dz"].Points.AddXY("dz[" + ii.ToString() + "]", ans[ii, 2]);
+            }
 
         }
         class Excel
