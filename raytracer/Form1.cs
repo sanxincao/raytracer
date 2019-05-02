@@ -13,12 +13,30 @@ using MathNet.Numerics.LinearAlgebra.Double;
 using MathNet.Numerics.LinearAlgebra.Factorization;
 using System.Windows.Forms;
 using System.IO;
+
+
+using System.Reflection;
+
+using MathWorks.MATLAB.NET.Arrays;
+using MathWorks.MATLAB.NET.Utility;
+
+
+
+
+
+
 namespace raytracer
 {
+   
+
     public partial class Form1 : Form
     {
+       
         Excel excel;//由于全局只使用一张表所以只定义一个excel变量
+
         Vector<double> n;//第二个方程的解用于可视化
+        
+       
         public Form1()
         {
             InitializeComponent();//初始化窗口
@@ -27,7 +45,7 @@ namespace raytracer
         }
         private void label1_Click(object sender, EventArgs e)
         {
-
+            
         }
         private void folderBrowserDialog1_HelpRequest(object sender, EventArgs e)
         {
@@ -40,44 +58,71 @@ namespace raytracer
             OpenFileDialog dlg = new OpenFileDialog();
             if (textBox1.Text != "编辑")
                 dlg.InitialDirectory = textBox1.Text;
-            
+
             dlg.Filter = "文本文件|*.*|表格文件|*.xlsx";
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 textBox1.Text = dlg.FileName;//路径变量
                 excel = new Excel(dlg.FileName, 1);
                 //MessageBox.Show(dlg.FileName);
-            
+
                 for (int i = 0; i < 5; i++)
                 {
                     var x = excel.solve(i);//解第一个方程
                     textBox2.Text += "第" + (i + 1).ToString() + "组解：  " + " X:  " + x[0].ToString() + " Y:  " + x[1].ToString() + " Z:  " + x[2].ToString() + " d:  " + x[3].ToString() + Environment.NewLine;
                     //输出
                 }
-                
+
             }
            ;
         }
- 
+
         private void button2_Click(object sender, EventArgs e)//修正值摁钮
         {
-            n = excel.solve1();//解第二个方程
-            for(int i=0;i<48;i++)
-            { textBox3.Text += "第" + (i + 1).ToString() + "组解:  " + " dx:  " + n[i * 3].ToString() + " dy:  " + n[i * 3 + 1].ToString() + " dz:  " + n[i * 3 + 2].ToString()+Environment.NewLine; }
+            string str = System.Environment.CurrentDirectory;
+
+            MLApp.MLApp matlab = new MLApp.MLApp();
+            string comm = "";
+             matlab.Execute(@"cd "+str+"\\第二步计算");
+            //matlab.Execute("");
+            // Define the output 
+            object result = null;
+
+            // Call the MATLAB function myfunc
+             matlab.Feval("T", 1, out result);
+            // matlab.Feval("myfunc", 2, out result, 3.14, 42.0, "world");
+
+            // Display result 
+            object[] res = result as object[];
+            double[,] ans = new double[48, 3];
+            ans = (double[,])res[0];
+            for (int i = 0; i < 48; i++)
+            { textBox3.Text += "第" + (i + 1).ToString() + "组解:  " + " dx:  " + ans[i ,0].ToString() + " dy:  " + ans[i ,1].ToString() + " dz:  " + ans[i  , 2].ToString()+Environment.NewLine; }
+            //textBox3.Text = ans[1,1].ToString();
+            //  ans = result;
+            //  MessageBox.Show(result);
+            // Console.WriteLine(res[0]);
+            // Console.WriteLine(res[1]);
+            // Console.ReadLine();
+            // n = excel.solve1();//解第二个方程
+            //for(int i=0;i<48;i++)
+            //{ textBox3.Text += "第" + (i + 1).ToString() + "组解:  " + " dx:  " + n[i * 3].ToString() + " dy:  " + n[i * 3 + 1].ToString() + " dz:  " + n[i * 3 + 2].ToString()+Environment.NewLine; }
+           for( int ii = 1; ii < 48; ii++) { 
+            this.chart1.Series["dx"].Points.AddXY("dx[" + ii.ToString() + "]", ans[ii ,0]);
+            this.chart1.Series["dy"].Points.AddXY("dy[" + ii.ToString() + "]", ans[ii, 1]);
+            this.chart1.Series["dz"].Points.AddXY("dz[" + ii.ToString() + "]", ans[ii , 2]);
         }
+  }
 
         private void button3_Click(object sender, EventArgs e)//画图摁钮
         {
- 
-                int i = Convert.ToInt32(textBox4.Text);
-                this.chart1.Series["delta"].Points.AddXY("dx[" + i.ToString() + "]", n[i*3]);
-                this.chart1.Series["delta"].Points.AddXY("dy[" + i.ToString() + "]", n[i*3+1]);
-                this.chart1.Series["delta"].Points.AddXY("dz[" + i.ToString() + "]", n[i*3+2]);
-            
+
+          
+
         }
         class Excel
         {
-            double[,] all=new double[49,10];//用来放excel表里数据，从一开始
+            double[,] all = new double[49, 10];//用来放excel表里数据，从一开始
             double[,] buffer = new double[6, 5];//用来放第一组解。从一开始
             //下面都是用来初始化的构造函数，不用管
             string filepath;
@@ -94,7 +139,7 @@ namespace raytracer
                 this.filepath = path;
                 WB = excel.Workbooks.Open(path);
                 ws = WB.Worksheets[sheet];
-            }       
+            }
             public void readall(int row, int col)//读取表内元素放在all数组里
             {
                 for (int i = 1; i < row + 1; i++)
@@ -141,9 +186,9 @@ namespace raytracer
             public double[] Calculation(int i, int j)//计算矩阵里的偏导数
             {
                 double[] vs = new double[4];
-                vs[1] = buffer[j+1, 1];
-                vs[2] = buffer[j+1, 2];
-                vs[3] = buffer[j+1, 3];
+                vs[1] = buffer[j + 1, 1];
+                vs[2] = buffer[j + 1, 2];
+                vs[3] = buffer[j + 1, 3];
                 return math.delta(readrow(i), vs);
             }
             //由于第二个方程的A,B方程太大，额外使用函数建立。
@@ -156,12 +201,12 @@ namespace raytracer
                     {
                         //我发现矩阵前三个的偏导和后三个一致
                         buff = Calculation(j + 1, i);
-                        A[i*48+j, j * 3] = buff[1];
-                        A[i*48+j, j * 3 + 1] = buff[2];
-                        A[i*48+j, j * 3 + 2] = buff[3];
-                        A[i*48+j, 48 * 3 + i * 3] =buff[1];
-                        A[i*48+j,( (i + 48) * 3)+1] = buff[2];
-                        A[i*48+j, ((i + 48) * 3)+2] = buff[3];
+                        A[i * 48 + j, j * 3] = buff[1];
+                        A[i * 48 + j, j * 3 + 1] = buff[2];
+                        A[i * 48 + j, j * 3 + 2] = buff[3];
+                        A[i * 48 + j, 48 * 3 + i * 3] = buff[1];
+                        A[i * 48 + j, ((i + 48) * 3) + 1] = buff[2];
+                        A[i * 48 + j, ((i + 48) * 3) + 2] = buff[3];
                     }
                 return A;
             }
@@ -169,12 +214,12 @@ namespace raytracer
             {
                 readall(48, 9);
                 var b = new double[48 * 5];
-                for(int j=0;j<5;j++)
-                for (int i = 0; i < 48 ; i++)
-                {
-                    double L=calL(i+1,j+1);
-                    b[i+j*48] =  buffer[j+1, 4] + all[i + 1, j+5] - L;//按照公式来的
-                }
+                for (int j = 0; j < 5; j++)
+                    for (int i = 0; i < 48; i++)
+                    {
+                        double L = calL(i + 1, j + 1);
+                        b[i + j * 48] = buffer[j + 1, 4] + all[i + 1, j + 5] - L;//按照公式来的
+                    }
                 return b;
             }
             public double calL(int i, int j)//计算Lij
@@ -205,10 +250,10 @@ namespace raytracer
             });
 
 
-               // MessageBox.Show(b.ToString());
+                // MessageBox.Show(b.ToString());
                 var x = A.Solve(b);
                 for (int i = 1; i < 5; i++)//j是从零开始的
-                { buffer[j + 1, i] = x[i-1]; }
+                { buffer[j + 1, i] = x[i - 1]; }
                 return x;
             }
             public Vector<double> solve1()//计算第二个格方程的函数
@@ -253,7 +298,9 @@ namespace raytracer
                     return Delta;
                 }
             }
-        }
 
+        }
     }
+    
+       
 }
